@@ -25,7 +25,11 @@ references:
   - type: software
     title: "Recommendation ITU-R P.528-5, Release 5.1 (U.S. Reference Software Implementation)"
     authors:
-      - name: "Institute for Telecommunication Sciences, National Telecommunications and Information Administration"
+      - given-names: William
+        family-names: Kozma
+        name-suffix: Jr
+        affiliation: "The Institute for Telecommunication Sciences"
+        orcid: "https://orcid.org/0000-0002-7417-4009"
     doi: 10.5281/zenodo.5911006
     repository-code: "https://github.com/NTIA/p528"
     version: 5.1.0
