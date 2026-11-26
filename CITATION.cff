@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below, and cite NTIA's reference implementation it ports."
+type: software
+title: "itu-p528: Recommendation ITU-R P.528 for Rust"
+abstract: >
+  A Rust port of NTIA/ITS's reference implementation of Recommendation ITU-R P.528-5
+  (Annex 2, the step-by-step method): basic transmission loss for aeronautical
+  paths over a smooth earth, 100 MHz to 30 GHz, including the P.676 gaseous
+  absorption and P.835 reference atmosphere it uses. Checked against NTIA's C++.
+authors:
+  - family-names: Santana
+    given-names: Daniel
+    email: danielgsantana@gmail.com
+repository-code: "https://github.com/dgsantana/p528-rs"
+url: "https://github.com/dgsantana/p528-rs"
+license: MIT
+version: 0.1.0
+keywords:
+  - radio propagation
+  - ITU-R P.528
+  - aeronautical
+  - path loss
+  - basic transmission loss
+references:
+  - type: software
+    title: "Recommendation ITU-R P.528-5, Release 5.1 (U.S. Reference Software Implementation)"
+    authors:
+      - name: "Institute for Telecommunication Sciences, National Telecommunications and Information Administration"
+    doi: 10.5281/zenodo.5911006
+    repository-code: "https://github.com/NTIA/p528"
+    version: 5.1.0
+  - type: standard
+    title: "Recommendation ITU-R P.528-5: A propagation prediction method for aeronautical mobile and radionavigation services using the VHF, UHF and SHF bands"
+    authors:
+      - name: "International Telecommunication Union, Radiocommunication Sector (ITU-R)"
+    url: "https://www.itu.int/rec/R-REC-P.528/en"
