@@ -3,7 +3,8 @@ developed by the National Telecommunications and Information Administration (NTI
 Sciences: https://github.com/NTIA/p528, release v5.1, commit 98d5175766f3b6ce8d39dbb795a594aeab103393.
 
 Works of NTIA employees are not subject to copyright protection within the United States (Title 17 United States
-Code Section 105). NTIA's software disclaimer and release terms are in reference/ntia-p528/LICENSE.md.
+Code Section 105). NTIA's software disclaimer and release terms are at https://github.com/NTIA/p528/blob/master/LICENSE.md
+and, in this repository, in reference/ntia-p528/LICENSE.md.
 
 Changes, November 2026: the C++ model (P.528, and the parts of P.676 and P.835 it calls) is translated to Rust. The
 computation of every loss NTIA's software returns is unchanged. The differences:
@@ -18,4 +19,5 @@ computation of every loss NTIA's software returns is unchanged. The differences:
 - Two bisection loops return once their step reaches zero, where NTIA's loop would not end; this changes no result
   that NTIA's software returns.
 
-The files under reference/ntia-p528/ntia are NTIA's, unmodified. They are used only by this crate's tests.
+The files under reference/ntia-p528/ntia are NTIA's, unmodified, and are not covered by this crate's MIT licence.
+They are used only by this crate's tests.

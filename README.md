@@ -11,18 +11,21 @@ and returns the same answers: its tests compare every result with NTIA's C++ com
 ## Usage
 
 ```rust
-use p528::{P528Input, Polarization, p528};
+use p528::{P528Error, P528Input, Polarization, p528};
 
-let result = p528(&P528Input {
-    distance_km: 100.0,
-    h1_m: 100.0,
-    h2_m: 15_000.0,
-    frequency_mhz: 3_600.0,
-    time_percent: 90.0,
-    polarization: Polarization::Horizontal,
-})?;
-// 151.6 dB, one of NTIA's published examples.
-println!("{:.1} dB, {:?}", result.basic_transmission_loss_db, result.mode);
+fn main() -> Result<(), P528Error> {
+    let result = p528(&P528Input {
+        distance_km: 100.0,
+        h1_m: 100.0,
+        h2_m: 15_000.0,
+        frequency_mhz: 3_600.0,
+        time_percent: 90.0,
+        polarization: Polarization::Horizontal,
+    })?;
+    // 151.6 dB, one of NTIA's published examples.
+    println!("{:.1} dB, {:?}", result.basic_transmission_loss_db, result.mode);
+    Ok(())
+}
 ```
 
 For many distances between the same two heights, build a `P528Model` once and evaluate each distance with it. The
@@ -30,14 +33,17 @@ model does the work that depends only on the heights, frequency and polarisation
 `p528`:
 
 ```rust
-use p528::{P528Model, Polarization};
+use p528::{P528Error, P528Model, Polarization};
 
-let model = P528Model::create(20.0, 5_000.0, 3_000.0, Polarization::Vertical)?;
-for distance_km in [1.0, 10.0, 50.0] {
-    match model.loss(distance_km, 50.0) {
-        Ok(result) => println!("{distance_km} km: {:.1} dB", result.basic_transmission_loss_db),
-        Err(error) => println!("{distance_km} km: {error}"),
+fn main() -> Result<(), P528Error> {
+    let model = P528Model::create(20.0, 5_000.0, 3_000.0, Polarization::Vertical)?;
+    for distance_km in [1.0, 10.0, 50.0] {
+        match model.loss(distance_km, 50.0) {
+            Ok(result) => println!("{distance_km} km: {:.1} dB", result.basic_transmission_loss_db),
+            Err(error) => println!("{distance_km} km: {error}"),
+        }
     }
+    Ok(())
 }
 ```
 
@@ -54,7 +60,9 @@ Without features, the only dependency is `bitflags`.
 ## Inputs
 
 The limits are the ones NTIA's reference enforces. Outside them, `p528`, `P528Model::create` and `P528Model::loss`
-return a `P528Error` that carries NTIA's return code (`P528Error::ntia_code`), checked in NTIA's order.
+return a `P528Error` that carries NTIA's return code (`P528Error::ntia_code`). `p528` checks every input in NTIA's
+order, so an input NTIA refuses gets NTIA's code, NaN and infinity included; a model checks the heights and frequency
+when it is created, then the distance and time percentage.
 
 | Field | Unit | Accepted | Notes |
 |---|---|---|---|
@@ -82,8 +90,8 @@ that is not a loss, the port returns an error instead:
   returns NaN with a success code.
 - **Terminals at the same height and 0 km apart are refused** with `P528Error::CoincidentTerminals`, NTIA's code 10.
   The reference defines that code but returns success with every loss 0.
-- **NaN inputs, and an infinite distance, are refused** with `P528Error::NotFinite`. The reference accepts them and
-  returns NaN.
+- **NaN inputs, and an infinite distance, are refused** with `P528Error::NotFinite` when they pass NTIA's range checks.
+  The reference accepts them and returns NaN.
 
 Kept as the reference has it:
 
@@ -113,13 +121,17 @@ dev-dependency. The test binary `ntia_reference` compares the port with it:
 | `examples::published_examples` | NTIA's four published examples, against the published values and against the reference. |
 | `grid::generated_cases_agree` | Deterministic random cases, log-uniform in distance (0.01 km to 2,000 km), heights and frequency, uniform in time percentage, both polarisations. 2,000 by default; set `P528_CASES` for more. |
 | `grid::tabulated_percentages_agree` | The 17 time percentages the tables are built on, 20 geometries each. |
-| `edges::*` | Every refusal code, several failing checks at once, coincident terminals, height warnings, distances around the line-of-sight limit, at zero and to 10,000 km, and the corners of the ranges. |
+| `edges::*` | Every refusal code, several failing checks at once, NaN and infinite inputs, coincident terminals, height warnings, distances around the line-of-sight limit, at zero and to 10,000 km, and the corners of the ranges. |
 | `model::reused_model_agrees_with_reference` | One `P528Model` per height pair, evaluated at distances out of order and repeated, against a fresh reference call for each. |
 | `model::parallel_batch_matches_sequential` | With `parallel`: `par_losses` returns the sequential results, in order. |
 
 A case agrees when both succeed with the same mode and warnings and every loss within 0.01 dB, or both refuse it with
-the same code, or the reference returns NaN or coincident-terminal zeros and the port the matching error. Measured on Windows with MSVC: 20,000 generated cases agree; over 3,000 cases the largest loss
-difference is 3.4e-13 dB, and 97 % of the results are bit-identical.
+the same code, or the reference returns NaN or coincident-terminal zeros and the port the matching error. Measured on
+Windows with the reference built by MSVC: 20,000 generated cases agree; over 3,000 cases the largest loss difference
+is 3.4e-13 dB, and 97 % of the results are bit-identical.
+
+Only the MSVC build of the reference has been compared. NTIA's code calls `abs` unqualified on `double` values, which
+another C++ compiler and standard library could resolve to the integer overload; the comparison would then show it.
 
 Not covered: no case found sets `Warnings::DIFFRACTION_TROPO_REGION` (a probe of 252 height, frequency and
 polarisation combinations at 2,000 km found none), so the port's handling of that warning is ported but not compared.
@@ -155,6 +167,10 @@ citation and README changed after v5.1.
 
 ## Licence
 
-This crate is under the MIT licence (`LICENSE`). NTIA's software is a work of the U.S. Government and is not subject
-to copyright protection in the United States; NTIA's disclaimer and terms are in `reference/ntia-p528/LICENSE.md`, and
-`NOTICE` states how this port changes NTIA's software, as those terms ask.
+The Rust code in this repository is under the MIT licence (`LICENSE`). The MIT licence does not cover
+`reference/ntia-p528/ntia/`: those are NTIA's files, unmodified, under NTIA's terms in `reference/ntia-p528/LICENSE.md`.
+NTIA's software is a work of the U.S. Government and is not subject to copyright protection in the United States.
+`NOTICE` states how this port changes NTIA's software, as NTIA's terms ask.
+
+A published package of this crate leaves out `reference/` and `tests/`: the tests need NTIA's C++ and a C++
+compiler.
