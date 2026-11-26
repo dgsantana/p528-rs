@@ -1,0 +1,33 @@
+[package]
+name = "itu-p528"
+version = "0.1.0"
+edition = "2024"
+authors = ["Daniel Santana <dgsantana@gmail.com>"]
+license = "MIT"
+description = "Rust implementation of Recommendation ITU-R P.528, propagation curves for aeronautical services (air-to-ground and air-to-air)"
+repository = "https://github.com/dgsantana/p528-rs"
+readme = "README.md"
+keywords = ["radio", "propagation", "p528", "itu", "aeronautical"]
+categories = ["science", "simulation"]
+rust-version = "1.85"
+
+[lib]
+name = "p528"
+crate-type = ["rlib"]
+
+[dependencies]
+bitflags = "2.13"
+
+[features]
+default = []
+
+[dev-dependencies]
+# NTIA's C++ P.528, the reference the tests compare with; never part of the library.
+ntia-p528-reference = { path = "reference/ntia-p528" }
+
+[[test]]
+name = "ntia_reference"
+path = "tests/ntia_reference/mod.rs"
+
+[profile.dev.package."*"]
+debug = "line-tables-only"
