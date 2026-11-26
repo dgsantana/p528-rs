@@ -5,7 +5,7 @@
 use super::spectroscopy::{OXYGEN, WATER_VAPOUR};
 use crate::model::max;
 use crate::p835::{
-    global_pressure, global_temperature, global_water_vapour_density,
+    Profile, global_pressure, global_temperature, global_water_vapour_density,
     water_vapour_density_to_pressure,
 };
 
@@ -13,14 +13,23 @@ use crate::p835::{
 const RHO_0: f64 = 7.5;
 
 /// Water vapour partial pressure, hPa, at height `h_km` (`GlobalWetPressure`).
-pub fn global_wet_pressure(h_km: f64) -> f64 {
-    let t_kelvin = global_temperature(h_km);
-    let p_hpa = global_pressure(h_km);
+pub fn global_wet_pressure(h_km: f64) -> Profile {
+    let t_kelvin = global_temperature(h_km)?;
+    let p_hpa = global_pressure(h_km)?;
     let rho_g_m3 = max(
-        global_water_vapour_density(h_km, RHO_0),
+        global_water_vapour_density(h_km, RHO_0)?,
         2.0 * 10.0_f64.powf(-6.0) * 216.7 * p_hpa / t_kelvin,
     );
-    water_vapour_density_to_pressure(rho_g_m3, t_kelvin)
+    Ok(water_vapour_density_to_pressure(rho_g_m3, t_kelvin))
+}
+
+/// Refractive index of the reference atmosphere at height `h_km`.
+pub fn refractive_index_at(h_km: f64) -> Profile {
+    Ok(refractive_index(
+        global_pressure(h_km)?,
+        global_temperature(h_km)?,
+        global_wet_pressure(h_km)?,
+    ))
 }
 
 /// Refractive index from dry pressure, temperature and water vapour pressure (`RefractiveIndex`).

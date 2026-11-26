@@ -2,8 +2,11 @@
 
 use std::fmt;
 
-/// Why [`crate::p528`] refused its input. Every variant but [`P528Error::NotFinite`] is one of NTIA's return codes,
-/// checked in NTIA's order, so the same input gives the same error.
+/// Why the model refused an input or could not compute a result.
+///
+/// The variants with an NTIA return code are checked in NTIA's order, so an input NTIA refuses gives the same code.
+/// The others cover what NTIA's reference lets through and answers with a value that is not a loss: NaN, or 0 dB for
+/// coincident terminals.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum P528Error {
     /// An input is NaN, or the distance is infinite. NTIA's reference has no such check: a NaN passes its
@@ -26,10 +29,16 @@ pub enum P528Error {
     PercentLow,
     /// The time percentage is above 99 (`ERROR_VALIDATION__PERCENT_HIGH`, 8).
     PercentHigh,
+    /// The terminals are at the same height and 0 km apart (`ERROR_HEIGHT_AND_DISTANCE`, 10). NTIA defines this code
+    /// but returns success with every loss 0.
+    CoincidentTerminals,
+    /// The path leaves the reference atmosphere (P.835, 0 km to 100 km): on long transhorizon paths, from about
+    /// 2,400 km, the troposcatter common volume is above 100 km. NTIA's reference returns NaN with a success code.
+    OutsideAtmosphere,
 }
 
 impl P528Error {
-    /// NTIA's return code for this error; `None` for [`P528Error::NotFinite`], which NTIA does not have.
+    /// NTIA's return code for this error; `None` for the errors NTIA does not have.
     pub fn ntia_code(self) -> Option<i32> {
         match self {
             Self::NotFinite => None,
@@ -41,6 +50,8 @@ impl P528Error {
             Self::FrequencyHigh => Some(6),
             Self::PercentLow => Some(7),
             Self::PercentHigh => Some(8),
+            Self::CoincidentTerminals => Some(10),
+            Self::OutsideAtmosphere => None,
         }
     }
 }
@@ -57,6 +68,8 @@ impl fmt::Display for P528Error {
             Self::FrequencyHigh => "frequency must not exceed 30,000 MHz",
             Self::PercentLow => "time percentage must be at least 1",
             Self::PercentHigh => "time percentage must not exceed 99",
+            Self::CoincidentTerminals => "the terminals are at the same height and 0 km apart",
+            Self::OutsideAtmosphere => "the path leaves the reference atmosphere (above 100 km)",
         })
     }
 }

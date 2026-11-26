@@ -17,9 +17,12 @@ crate-type = ["rlib"]
 
 [dependencies]
 bitflags = "2.13"
+rayon = { version = "1.11", optional = true }
 
 [features]
 default = []
+# `P528Model::par_losses`, which evaluates many distances on rayon's thread pool.
+parallel = ["dep:rayon"]
 
 [dev-dependencies]
 # NTIA's C++ P.528, the reference the tests compare with; never part of the library.

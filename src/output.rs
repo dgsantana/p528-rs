@@ -5,8 +5,6 @@ use bitflags::bitflags;
 /// Mode of propagation that sets the loss (NTIA's `propagation_mode`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PropagationMode {
-    /// No mode: the terminals are at the same height and 0 km apart, and every loss is 0 (`PROP_MODE__NOT_SET`, 0).
-    NotSet,
     /// Line of sight (`PROP_MODE__LOS`, 1).
     LineOfSight,
     /// Diffraction (`PROP_MODE__DIFFRACTION`, 2).
@@ -19,7 +17,6 @@ impl PropagationMode {
     /// NTIA's numeric value for this mode.
     pub fn ntia_code(self) -> i32 {
         match self {
-            Self::NotSet => 0,
             Self::LineOfSight => 1,
             Self::Diffraction => 2,
             Self::Troposcatter => 3,

@@ -13,7 +13,7 @@ mod troposcatter;
 mod validate;
 mod variability;
 
-pub use p528::p528;
+pub use p528::{P528Model, p528};
 
 /// Mean earth radius, km (`a_0__km`).
 pub const A_0_KM: f64 = 6371.0;

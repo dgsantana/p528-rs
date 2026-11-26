@@ -34,33 +34,48 @@ pub fn check(d_km: f64, h1_m: f64, h2_m: f64, f_mhz: f64, pol: i32, p: f64) -> O
     compare(&label, port, &reference)
 }
 
-/// Within `tolerance`, or NaN in both: NTIA's reference returns NaN on some accepted inputs (from about 2,400 km,
-/// where the troposcatter common volume rises above the 100 km the reference atmosphere covers), and the port must
-/// return the same.
-fn near(port: f64, reference: f64, tolerance: f64) -> bool {
-    (port - reference).abs() <= tolerance || (port.is_nan() && reference.is_nan())
+/// What the port must return for a case, from NTIA's answer.
+enum Expected {
+    /// A loss within tolerance of NTIA's.
+    Loss,
+    /// A refusal with this NTIA code.
+    Refusal(i32),
+    /// `P528Error::OutsideAtmosphere`, where NTIA returns NaN.
+    OutsideAtmosphere,
 }
 
-fn compare(
+/// Compares one result of the port with NTIA's for the same case; `None` when they agree.
+///
+/// Where NTIA returns success with a value that is not a loss, the port must refuse instead: NaN (the path leaves the
+/// reference atmosphere) with [`P528Error::OutsideAtmosphere`], and 0 dB with no mode (coincident terminals) with
+/// [`P528Error::CoincidentTerminals`].
+pub fn compare(
     label: &str,
     port: Result<P528Result, P528Error>,
     reference: &Reference,
 ) -> Option<String> {
-    let reference_ok = reference.code == 0 || reference.code == 11;
     let r = &reference.output;
-    match port {
-        Ok(port) if reference_ok => {
-            let close = near(port.basic_transmission_loss_db, r.a_db, TOLERANCE_DB)
-                && near(port.free_space_loss_db, r.a_fs_db, TOLERANCE_DB)
-                && near(port.absorption_loss_db, r.a_a_db, TOLERANCE_DB)
-                && near(port.distance_km, r.d_km, TOLERANCE_KM)
-                && near(port.theta_h1_rad, r.theta_h1_rad, TOLERANCE_RAD);
+    let expected = if reference.code != 0 && reference.code != 11 {
+        Expected::Refusal(reference.code)
+    } else if r.propagation_mode == 0 {
+        Expected::Refusal(10)
+    } else if r.a_db.is_nan() {
+        Expected::OutsideAtmosphere
+    } else {
+        Expected::Loss
+    };
+    match (port, expected) {
+        (Ok(port), Expected::Loss) => {
+            let close = (port.basic_transmission_loss_db - r.a_db).abs() <= TOLERANCE_DB
+                && (port.free_space_loss_db - r.a_fs_db).abs() <= TOLERANCE_DB
+                && (port.absorption_loss_db - r.a_a_db).abs() <= TOLERANCE_DB
+                && (port.distance_km - r.d_km).abs() <= TOLERANCE_KM
+                && (port.theta_h1_rad - r.theta_h1_rad).abs() <= TOLERANCE_RAD;
             let same = port.mode.ntia_code() == r.propagation_mode
                 && port.warnings.bits() as i32 == r.warnings;
             (!close || !same).then(|| {
                 format!(
-                    "{label}: port A {:.4} fs {:.4} a {:.4} d {:.6} th {:.3e} mode {} w{:#x}; \
-                     NTIA A {:.4} fs {:.4} a {:.4} d {:.6} th {:.3e} mode {} w{:#x}",
+                    "{label}: port A {:.4} fs {:.4} a {:.4} d {:.6} th {:.3e} mode {} w{:#x};                      NTIA A {:.4} fs {:.4} a {:.4} d {:.6} th {:.3e} mode {} w{:#x}",
                     port.basic_transmission_loss_db,
                     port.free_space_loss_db,
                     port.absorption_loss_db,
@@ -78,18 +93,13 @@ fn compare(
                 )
             })
         }
-        Err(error) if !reference_ok => (error.ntia_code() != Some(reference.code)).then(|| {
-            format!(
-                "{label}: port refuses with {error:?}, NTIA with code {}",
-                reference.code
-            )
+        (Err(P528Error::OutsideAtmosphere), Expected::OutsideAtmosphere) => None,
+        (Err(error), Expected::Refusal(code)) => (error.ntia_code() != Some(code)).then(|| {
+            format!("{label}: port refuses with {error:?}, NTIA's equivalent code is {code}")
         }),
-        Ok(port) => Some(format!(
-            "{label}: port returns {port:?}, NTIA refuses with code {}",
+        (port, _) => Some(format!(
+            "{label}: port returns {port:?}, NTIA returns code {} with {r:?}",
             reference.code
-        )),
-        Err(error) => Some(format!(
-            "{label}: port refuses with {error:?}, NTIA returns {r:?}"
         )),
     }
 }

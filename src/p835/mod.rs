@@ -4,6 +4,6 @@
 mod reference_atmosphere;
 
 pub use reference_atmosphere::{
-    global_pressure, global_temperature, global_water_vapour_density,
+    OutsideAtmosphere, Profile, global_pressure, global_temperature, global_water_vapour_density,
     water_vapour_density_to_pressure,
 };

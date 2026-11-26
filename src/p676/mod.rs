@@ -6,4 +6,5 @@ mod slant_path;
 mod specific_attenuation;
 mod spectroscopy;
 
+pub use ray_trace::SlantPathLayers;
 pub use slant_path::slant_path_attenuation;

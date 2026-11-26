@@ -27,8 +27,8 @@ fn refusals_match() {
     assert_all_agree(&failures, cases.len());
 }
 
-/// Terminals at the same height and 0 km apart: NTIA returns success with every loss 0 and no mode, with the height
-/// warning when above 20 km.
+/// Terminals at the same height and 0 km apart: NTIA returns success with every loss 0 and no mode; the port refuses
+/// with NTIA's code for the case, 10.
 #[test]
 fn coincident_terminals_match() {
     let cases = [

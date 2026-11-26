@@ -1,35 +1,12 @@
-//! Input validation (NTIA `ValidateInputs.cpp`).
+//! Input validation (NTIA `ValidateInputs.cpp`), split into the checks on the terminals and frequency and the checks
+//! on the distance and time percentage, so a model built for one pair of heights checks each part once.
 
-use crate::{P528Error, P528Input, Warnings};
+use crate::{P528Error, Warnings};
 
-/// What validation lets through.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Valid {
-    /// The model can run.
-    Run,
-    /// The terminals are at the same height and 0 km apart (`ERROR_HEIGHT_AND_DISTANCE`). NTIA returns success with
-    /// every loss 0.
-    Coincident,
-}
-
-/// Checks `input` in NTIA's order, setting height warnings on the way as NTIA does (`ValidateInputs`). NaN, and an
-/// infinite distance, are refused first; NTIA has no such check.
-pub fn validate(input: &P528Input, warnings: &mut Warnings) -> Result<Valid, P528Error> {
-    let P528Input {
-        distance_km: d_km,
-        h1_m,
-        h2_m,
-        frequency_mhz: f_mhz,
-        time_percent: p,
-        ..
-    } = *input;
-
-    if [d_km, h1_m, h2_m, f_mhz, p].iter().any(|v| v.is_nan()) || d_km.is_infinite() {
+/// Checks the terminal heights and the frequency in NTIA's order, returning the height warnings.
+pub fn terminals(h1_m: f64, h2_m: f64, f_mhz: f64) -> Result<Warnings, P528Error> {
+    if h1_m.is_nan() || h2_m.is_nan() || f_mhz.is_nan() {
         return Err(P528Error::NotFinite);
-    }
-
-    if d_km < 0.0 {
-        return Err(P528Error::Distance);
     }
     if !(1.5..=80000.0).contains(&h1_m) {
         return Err(P528Error::H1);
@@ -37,11 +14,12 @@ pub fn validate(input: &P528Input, warnings: &mut Warnings) -> Result<Valid, P52
     if !(1.5..=80000.0).contains(&h2_m) {
         return Err(P528Error::H2);
     }
+    let mut warnings = Warnings::empty();
     if h1_m > 20000.0 {
-        *warnings |= Warnings::HEIGHT_LIMIT_H1;
+        warnings |= Warnings::HEIGHT_LIMIT_H1;
     }
     if h2_m > 20000.0 {
-        *warnings |= Warnings::HEIGHT_LIMIT_H2;
+        warnings |= Warnings::HEIGHT_LIMIT_H2;
     }
     if h1_m > h2_m {
         return Err(P528Error::TerminalGeometry);
@@ -53,14 +31,33 @@ pub fn validate(input: &P528Input, warnings: &mut Warnings) -> Result<Valid, P52
         return Err(P528Error::FrequencyHigh);
     }
     // NTIA checks the polarisation here; `Polarization` cannot hold an invalid value.
+    Ok(warnings)
+}
+
+/// Checks the distance, in NTIA's order its first check.
+pub fn distance(d_km: f64) -> Result<(), P528Error> {
+    if d_km.is_nan() || d_km.is_infinite() {
+        return Err(P528Error::NotFinite);
+    }
+    if d_km < 0.0 {
+        return Err(P528Error::Distance);
+    }
+    Ok(())
+}
+
+/// Checks the time percentage and, last, coincident terminals, in NTIA's order.
+pub fn percentage(p: f64, coincident: bool) -> Result<(), P528Error> {
+    if p.is_nan() {
+        return Err(P528Error::NotFinite);
+    }
     if p < 1.0 {
         return Err(P528Error::PercentLow);
     }
     if p > 99.0 {
         return Err(P528Error::PercentHigh);
     }
-    if h1_m == h2_m && d_km == 0.0 {
-        return Ok(Valid::Coincident);
+    if coincident {
+        return Err(P528Error::CoincidentTerminals);
     }
-    Ok(Valid::Run)
+    Ok(())
 }

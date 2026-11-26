@@ -32,5 +32,5 @@ mod p835;
 
 pub use error::P528Error;
 pub use input::{P528Input, Polarization};
-pub use model::p528;
+pub use model::{P528Model, p528};
 pub use output::{P528Result, PropagationMode, Warnings};

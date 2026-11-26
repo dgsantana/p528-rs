@@ -7,3 +7,4 @@ mod compare;
 mod edges;
 mod examples;
 mod grid;
+mod model;
