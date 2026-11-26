@@ -11,9 +11,11 @@ keywords = ["radio", "propagation", "p528", "itu", "aeronautical"]
 categories = ["science", "simulation"]
 rust-version = "1.85"
 
+# The tests need the reference crate, a path dependency that a published package cannot carry.
+exclude = ["reference/", "tests/"]
+
 [lib]
 name = "p528"
-crate-type = ["rlib"]
 
 [dependencies]
 bitflags = "2.13"
