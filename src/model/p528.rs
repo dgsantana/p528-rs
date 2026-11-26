@@ -57,7 +57,8 @@ impl P528Model {
     /// # Errors
     ///
     /// [`P528Error`] for a height or frequency outside the ranges NTIA's reference accepts, in NTIA's order, for a
-    /// low terminal above the high one, and for NaN.
+    /// low terminal above the high one, and for NaN. [`p528`] checks every input in NTIA's order; a model checks the
+    /// heights and frequency here, before the distance and time percentage in [`P528Model::loss`].
     pub fn create(
         h1_m: f64,
         h2_m: f64,
@@ -65,6 +66,7 @@ impl P528Model {
         polarization: Polarization,
     ) -> Result<Self, P528Error> {
         let warnings = validate::terminals(h1_m, h2_m, frequency_mhz)?;
+        validate::finite(&[h1_m, h2_m, frequency_mhz], None)?;
         let f_mhz = frequency_mhz;
 
         // Step 1: terminal geometries.
@@ -172,7 +174,9 @@ impl P528Model {
     /// atmosphere.
     pub fn loss(&self, distance_km: f64, time_percent: f64) -> Result<P528Result, P528Error> {
         validate::distance(distance_km)?;
-        validate::percentage(time_percent, self.h1_m == self.h2_m && distance_km == 0.0)?;
+        validate::percentage(time_percent)?;
+        validate::finite(&[time_percent], Some(distance_km))?;
+        validate::coincident(self.h1_m, self.h2_m, distance_km)?;
         self.compute(distance_km, time_percent)
     }
 
@@ -321,11 +325,16 @@ pub fn p528(input: &P528Input) -> Result<P528Result, P528Error> {
         time_percent,
         polarization,
     } = *input;
-    // NTIA's order: the distance, the terminals and frequency, the time percentage, then coincident terminals; all
-    // checked before the model's work.
+    // NTIA's order (the distance, the terminals and frequency, the time percentage), then the port's check for NaN and
+    // infinity, then NTIA's coincident terminals; all before the model's work.
     validate::distance(distance_km)?;
     validate::terminals(h1_m, h2_m, frequency_mhz)?;
-    validate::percentage(time_percent, h1_m == h2_m && distance_km == 0.0)?;
+    validate::percentage(time_percent)?;
+    validate::finite(
+        &[h1_m, h2_m, frequency_mhz, time_percent],
+        Some(distance_km),
+    )?;
+    validate::coincident(h1_m, h2_m, distance_km)?;
     let model = P528Model::create(h1_m, h2_m, frequency_mhz, polarization)?;
     model.loss(distance_km, time_percent)
 }

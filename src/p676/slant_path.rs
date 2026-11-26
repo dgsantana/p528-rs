@@ -25,6 +25,10 @@ pub struct SlantPath {
 /// Gaseous attenuation from height `h_1_km` to `h_2_km` for a ray leaving `h_1_km` at `beta_1_rad` from zenith
 /// (`SlantPathAttenuation`). A ray pointing below the horizon (`beta_1_rad > π/2`) is traced from its grazing height
 /// in both directions (P.676, section 2.2.2). Fails when the ray leaves the reference atmosphere.
+#[allow(
+    clippy::neg_cmp_op_on_partial_ord,
+    reason = "a NaN ends the loop, as in NTIA's `while`"
+)]
 pub fn slant_path_attenuation(
     f_ghz: f64,
     h_1_km: f64,
@@ -51,7 +55,7 @@ pub fn slant_path_attenuation(
             let grazing_term = n_g * (A_0_KM + h_g_km);
             let start_term = n_1 * (A_0_KM + h_1_km) * beta_1_rad.sin();
             diff = grazing_term - start_term;
-            if diff.abs() <= 0.001 {
+            if !(diff.abs() > 0.001) {
                 break;
             }
         }

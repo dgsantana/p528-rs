@@ -1,6 +1,57 @@
 //! Edge cases: refusals, warnings, the line-of-sight boundary and the limits of the ranges.
 
-use crate::compare::{assert_all_agree, check};
+use p528::{P528Error, P528Model, Polarization, p528};
+
+use crate::compare::{assert_all_agree, check, input};
+
+/// A NaN or an infinity that NTIA's range checks catch gets NTIA's code: NaN passes NTIA's comparisons, so the first
+/// range check that fails decides, as in NTIA's.
+#[test]
+fn non_finite_inputs_ntia_refuses_match() {
+    let cases = [
+        (f64::NEG_INFINITY, 10.0, 1000.0, 1000.0, 0, 50.0), // code 1
+        (f64::NAN, 1.0, 1000.0, 1000.0, 0, 50.0),           // code 2
+        (10.0, 10.0, f64::INFINITY, 1000.0, 0, 50.0),       // code 3
+        (10.0, 1000.0, 10.0, f64::NAN, 0, 50.0),            // code 4
+        (10.0, 10.0, 1000.0, f64::INFINITY, 0, 50.0),       // code 6
+        (10.0, f64::NAN, 1000.0, 1000.0, 0, 0.5),           // code 7
+    ];
+    let failures: Vec<_> = cases
+        .iter()
+        .filter_map(|&(d, h1, h2, f, pol, p)| check(d, h1, h2, f, pol, p))
+        .collect();
+    assert_all_agree(&failures, cases.len());
+}
+
+/// A NaN that passes every range check, or an infinite distance, is refused with `NotFinite` by the single call and
+/// by the model, where NTIA's reference computes on and returns NaN.
+#[test]
+fn non_finite_inputs_ntia_accepts_are_refused() {
+    let nan = f64::NAN;
+    let cases = [
+        (nan, 10.0, 1000.0, 1000.0, 50.0),
+        (f64::INFINITY, 10.0, 1000.0, 1000.0, 50.0),
+        (10.0, nan, 1000.0, 1000.0, 50.0),
+        (10.0, 10.0, nan, 1000.0, 50.0),
+        (10.0, 10.0, 1000.0, nan, 50.0),
+        (10.0, 10.0, 1000.0, 1000.0, nan),
+    ];
+    for (d, h1, h2, f, p) in cases {
+        let single = p528(&input(d, h1, h2, f, 0, p));
+        assert_eq!(
+            single,
+            Err(P528Error::NotFinite),
+            "p528 d={d} h1={h1} h2={h2} f={f} p={p}"
+        );
+        let model =
+            P528Model::create(h1, h2, f, Polarization::Horizontal).and_then(|m| m.loss(d, p));
+        assert_eq!(
+            model,
+            Err(P528Error::NotFinite),
+            "model d={d} h1={h1} h2={h2} f={f} p={p}"
+        );
+    }
+}
 
 /// Every input the reference refuses is refused by the port with the same code, including where several checks fail
 /// at once (the first in NTIA's order wins).
