@@ -1,0 +1,21 @@
+This software is a derivative work of the U.S. Reference Software Implementation of Recommendation ITU-R P.528,
+developed by the National Telecommunications and Information Administration (NTIA), Institute for Telecommunication
+Sciences: https://github.com/NTIA/p528, release v5.1, commit 98d5175766f3b6ce8d39dbb795a594aeab103393.
+
+Works of NTIA employees are not subject to copyright protection within the United States (Title 17 United States
+Code Section 105). NTIA's software disclaimer and release terms are in reference/ntia-p528/LICENSE.md.
+
+Changes, November 2026: the C++ model (P.528, and the parts of P.676 and P.835 it calls) is translated to Rust. The
+computation of every loss NTIA's software returns is unchanged. The differences:
+
+- Inputs and results are Rust types; errors are a Rust enum carrying NTIA's return codes.
+- Where NTIA's software returns success with a value that is not a loss, this software returns an error: NaN when the
+  path leaves the reference atmosphere (NTIA's atmosphere functions return their error codes as values), 0 dB for
+  terminals at the same height and 0 km apart (NTIA's code 10), and NaN for an input that is NaN or an infinite
+  distance.
+- The work that does not depend on the distance or the time percentage can be done once for many distances; the
+  gaseous properties of the layers between the two terminals are stored and reused. The arithmetic is the same.
+- Two bisection loops return once their step reaches zero, where NTIA's loop would not end; this changes no result
+  that NTIA's software returns.
+
+The files under reference/ntia-p528/ntia are NTIA's, unmodified. They are used only by this crate's tests.
