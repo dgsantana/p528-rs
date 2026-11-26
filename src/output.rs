@@ -4,6 +4,7 @@ use bitflags::bitflags;
 
 /// Mode of propagation that sets the loss (NTIA's `propagation_mode`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum PropagationMode {
     /// Line of sight (`PROP_MODE__LOS`, 1).
     LineOfSight,
@@ -42,6 +43,7 @@ bitflags! {
 
 /// One prediction's results (NTIA's `Result`).
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub struct P528Result {
     /// Basic transmission loss, dB.
     pub basic_transmission_loss_db: f64,

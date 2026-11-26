@@ -8,6 +8,7 @@ use std::fmt;
 /// The others cover what NTIA's reference lets through and answers with a value that is not a loss: NaN, or 0 dB for
 /// coincident terminals.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum P528Error {
     /// An input is NaN, or the distance is infinite. NTIA's reference has no such check: a NaN passes its
     /// validation and an infinite distance its range checks, and the computation then returns NaN.
@@ -32,8 +33,9 @@ pub enum P528Error {
     /// The terminals are at the same height and 0 km apart (`ERROR_HEIGHT_AND_DISTANCE`, 10). NTIA defines this code
     /// but returns success with every loss 0.
     CoincidentTerminals,
-    /// The path leaves the reference atmosphere (P.835, 0 km to 100 km): on long transhorizon paths, from about
-    /// 2,400 km, the troposcatter common volume is above 100 km. NTIA's reference returns NaN with a success code.
+    /// The path leaves the reference atmosphere (P.835): on long transhorizon paths, from about 2,400 km, the
+    /// troposcatter common volume is above 100 km, the top of the atmosphere's profiles. NTIA's reference returns NaN
+    /// with a success code.
     OutsideAtmosphere,
 }
 
@@ -69,7 +71,7 @@ impl fmt::Display for P528Error {
             Self::PercentLow => "time percentage must be at least 1",
             Self::PercentHigh => "time percentage must not exceed 99",
             Self::CoincidentTerminals => "the terminals are at the same height and 0 km apart",
-            Self::OutsideAtmosphere => "the path leaves the reference atmosphere (above 100 km)",
+            Self::OutsideAtmosphere => "the path leaves the reference atmosphere",
         })
     }
 }
