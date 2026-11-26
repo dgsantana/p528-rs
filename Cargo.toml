@@ -2,7 +2,7 @@
 name = "itu-p528"
 version = "0.1.0"
 edition = "2024"
-authors = ["Daniel Santana <dgsantana@gmail.com>"]
+authors = ["Daniel Santana <danielgsantana@gmail.com>"]
 license = "MIT"
 description = "Rust implementation of Recommendation ITU-R P.528, propagation curves for aeronautical services (air-to-ground and air-to-air)"
 repository = "https://github.com/dgsantana/p528-rs"
